@@ -52,8 +52,8 @@ def main():
         return audio / (2**16 - 1)
 
     # load files
-    clean_array = np.zeros((0, max_steps), dtype='float64')
-    noisy_array = np.zeros((0, max_steps), dtype='float32')
+    clean_list = list()
+    noisy_list = list()
 
     for filename in clean_wav_paths:
         print('processing %s' % filename)
@@ -77,8 +77,11 @@ def main():
         sanitized_clean_audio = sanitize_audio(clean_audio)
         sanitized_noisy_audio = sanitize_audio(noisy_audio)
 
-        clean_array = np.append(clean_array, sanitized_clean_audio.reshape(1, -1), axis=0)
-        noisy_array = np.append(noisy_array, sanitized_noisy_audio.reshape(1, -1), axis=0)
+        clean_list.append(sanitized_clean_audio)
+        noisy_list.append(sanitized_noisy_audio)
+
+    clean_array = np.array(clean_list)
+    noisy_array = np.array(noisy_list)
 
     with open(args.OUTFILE, 'wb') as file_output:
         pickle.dump((clean_array, noisy_array), file_output)
