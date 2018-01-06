@@ -10,7 +10,7 @@ import scipy.io.wavfile
 def main():
     # parse arguments
     arg_parser = argparse.ArgumentParser(description='')
-    arg_parser.add_argument('RESAMPLE_RATE',
+    arg_parser.add_argument('SAMPLE_RATE',
                             type=int,
                             help='')
     arg_parser.add_argument('MAX_DURATION',
@@ -20,14 +20,11 @@ def main():
                             help='')
     arg_parser.add_argument('NOISY_DATA_DIR',
                             help='')
-    arg_parser.add_argument('OUTFILE',
+    arg_parser.add_argument('OUTFILE_PREFIX',
                             help='')
     args = arg_parser.parse_args()
 
-    assert args.RESAMPLE_RATE > 0 and args.MAX_DURATION > 0
-
-    # some calculations
-    max_steps = int(args.RESAMPLE_RATE * args.MAX_DURATION)
+    assert args.SAMPLE_RATE > 0 and args.MAX_DURATION > 0
 
     # scan file paths
     clean_wav_paths = { filename: os.path.join(args.CLEAN_DATA_DIR, filename)
@@ -43,48 +40,56 @@ def main():
               file=sys.stderr)
 
     # utility function
-    def sanitize_audio(audio):
-        audio = audio[:max_steps]
+    def fill_array(array, filenames, path_dict):
+        assert array.shape[0] == len(filenames)
 
-        padding_steps = max(0, max_steps - audio.shape[0])
-        audio = np.pad(audio, [(0, padding_steps)], 'constant', constant_values=0.0)
+        for ind, fname in enumerate(filenames):
+            wav_path = path_dict[fname]
+            sample_rate, audio = scipy.io.wavfile.read(wav_path)
 
-        return audio / (2**16 - 1)
+            # verify
+            if sample_rate != args.SAMPLE_RATE:
+                print('warning: the sample rate of file %s (%d) differ from that specified in argument (%d), skip this file' % (fname, sample_rate, args.SAMPLE_RATE),
+                      file=sys.stderr)
+                continue
 
-    # load files
-    clean_list = list()
-    noisy_list = list()
+            # sanitize audio
+            audio = audio[:max_steps]
 
-    for filename in clean_wav_paths:
-        print('processing %s' % filename)
+            padding_steps = max(0, max_steps - audio.shape[0])
+            audio = np.pad(audio, [(0, padding_steps)], 'constant', constant_values=0.0)
 
-        clean_path = clean_wav_paths[filename]
-        noisy_path = noisy_wav_paths[filename]
+            audio = audio / (2**16 - 1)
 
-        clean_sample_rate, clean_audio = scipy.io.wavfile.read(clean_path)
-        noisy_sample_rate, noisy_audio = scipy.io.wavfile.read(noisy_path)
+            array[ind] = audio
 
-        if clean_sample_rate != noisy_sample_rate:
-            print('warning: the clean and noisy data for file %s differ in sample rate (%d vs. %s), skip this file' % (filename, clean_sample_rate, noisy_sample_rate),
-                  file=sys.stderr)
-            continue
+    # make mmapped files
+    n_samples = len(paired_filenames)
+    max_steps = int(args.SAMPLE_RATE * args.MAX_DURATION)
 
-        if clean_audio.shape != noisy_audio.shape:
-            print('warning: the clean and noisy data for file %s differ duration, skip this file' % (filename,),
-                  file=sys.stderr)
-            continue
+    saved_filenames = list(paired_filenames)
+    saved_filenames.sort()
 
-        sanitized_clean_audio = sanitize_audio(clean_audio)
-        sanitized_noisy_audio = sanitize_audio(noisy_audio)
+    path_clean = '%s_clean.bin' % args.OUTFILE_PREFIX
+    path_noisy = '%s_noisy.bin' % args.OUTFILE_PREFIX
 
-        clean_list.append(sanitized_clean_audio)
-        noisy_list.append(sanitized_noisy_audio)
+    array_clean = np.memmap(path_clean, dtype='float32', mode='w+', shape=(n_samples, max_steps))
+    array_noisy = np.memmap(path_noisy, dtype='float32', mode='w+', shape=(n_samples, max_steps))
 
-    clean_array = np.array(clean_list)
-    noisy_array = np.array(noisy_list)
+    print('creating %s' % path_clean)
+    fill_array(array_clean, saved_filenames, clean_wav_paths)
 
-    with open(args.OUTFILE, 'wb') as file_output:
-        pickle.dump((clean_array, noisy_array), file_output)
+
+    print('creating %s' % path_noisy)
+    fill_array(array_noisy, saved_filenames, noisy_wav_paths)
+
+    # make filename list
+    path_filenames = '%s_filenames.txt' % args.OUTFILE_PREFIX
+    print('creating %s' % path_filenames)
+
+    with open(path_filenames, 'w+') as file_fnames:
+        file_fnames.write('\n'.join(saved_filenames))
+        file_fnames.write('\n')
 
 if __name__ == '__main__':
     main()
