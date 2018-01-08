@@ -29,7 +29,7 @@ def main():
     args = arg_parser.parse_args()
 
     # load or create model
-    model = create_model(30)
+    model = create_model(88200)
 
     if os.path.exists(args.MODEL_FILE):
         model.load_weights(args.MODEL_FILE)
@@ -42,20 +42,21 @@ def main():
     )
 
     # train model
-    with lzma.open("../dataset_clean.bin.xz") as f:
-        file_content = f.read()
-        with lzma.open("../dataset_noisy.bin.xz") as g:
-            file_content2=g.read()
-            arrayx = np.memmap(file_content, dtype='float32', mode='c')
-            arrayx = arrayx.reshape((-1, 22050 * 4))
+    #with lzma.open("../dataset_clean.bin.xz","rb") as f:
+    #with open("../dataset_clean.bin") as f:
+    #    file_content = f.read()
+    #    with lzma.open("../dataset_noisy.bin.xz","rb") as g:
+    #        file_content2=g.read()
+    arrayx = np.memmap("../dataset_noisy.bin", dtype='float32', mode='c')
+    arrayx = arrayx.reshape((-1, 22050 * 4,1))
 
-            arrayy = np.memmap(file_content2, dtype='float32', mode='c')
-            arrayy = array.reshape((-1, 22050 * 4))
+    arrayy = np.memmap("../dataset_clean.bin", dtype='float32', mode='c')
+    arrayy = arrayy.reshape((-1, 22050 * 4,1))
     
             #x = np.random.rand(1, 30, 1)
             #y = np.random.rand(1, 30, 1)
             
-            model.fit(arrayx, arrayy)
+    model.fit(arrayx, arrayy)
 
 if __name__ == '__main__':
     main()
