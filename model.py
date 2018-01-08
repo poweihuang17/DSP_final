@@ -4,7 +4,7 @@ from keras.models import Model
 from keras.layers import Input, Activation, LeakyReLU
 from keras.layers import Conv1D, Dropout, Dropout, Add, Concatenate
 
-def create_model(max_steps, filters_list=[128, 256, 512, 512], kernel_size_list=[65, 33, 17, 9]):
+def create_model(max_steps, filters_list=[64, 128, 256, 256], kernel_size_list=[65, 33, 17, 9]):
     assert len(filters_list) == len(kernel_size_list)
 
     # encoder part
