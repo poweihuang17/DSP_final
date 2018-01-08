@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import os
 import argparse
-
+import lzma
 import numpy as np
 from model import create_model
 from keras.optimizers import Adam
@@ -42,9 +42,20 @@ def main():
     )
 
     # train model
-    x = np.random.rand(1, 30, 1)
-    y = np.random.rand(1, 30, 1)
-    model.fit(x, y)
+    with lzma.open("../dataset_clean.bin.xz") as f:
+        file_content = f.read()
+        with lzma.open("../dataset_noisy.bin.xz") as g:
+            file_content2=g.read()
+            arrayx = np.memmap(file_content, dtype='float32', mode='c')
+            arrayx = arrayx.reshape((-1, 22050 * 4))
+
+            arrayy = np.memmap(file_content2, dtype='float32', mode='c')
+            arrayy = array.reshape((-1, 22050 * 4))
+    
+            #x = np.random.rand(1, 30, 1)
+            #y = np.random.rand(1, 30, 1)
+            
+            model.fit(arrayx, arrayy)
 
 if __name__ == '__main__':
     main()
