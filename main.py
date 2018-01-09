@@ -14,8 +14,8 @@ def main():
                             help='Create image plot of this model to this file')
     arg_parser.add_argument('--epochs',
                             type=int,
-                            default=10,
-                            help='Number of training steps')
+                            default=1,
+                            help='Number of training epochs')
     arg_parser.add_argument('--batch-size',
                             type=int,
                             default=10,
@@ -27,27 +27,34 @@ def main():
     arg_parser.add_argument('SAMPLING_RATE',
                             type=int,
                             help='')
-    arg_parser.add_argument('TIME_LENGTH',
+    arg_parser.add_argument('DURATION',
                             type=float,
                             help='')
     arg_parser.add_argument('MODEL_FILE',
                             help='')
-    arg_parser.add_argument('NOISY_DATA_FILE',
+    arg_parser.add_argument('NOISY_TRAIN_FILE',
                             help='')
-    arg_parser.add_argument('CLEAN_DATA_FILE',
+    arg_parser.add_argument('CLEAN_TRAIN_FILE',
+                            help='')
+    arg_parser.add_argument('NOISY_TEST_FILE',
+                            help='')
+    arg_parser.add_argument('PREDICTION_OUTFILE',
                             help='')
 
     args = arg_parser.parse_args()
 
     # parse arguments
-    time_steps = int(args.SAMPLING_RATE * args.TIME_LENGTH)
+    time_steps = int(args.SAMPLING_RATE * args.DURATION)
 
     # load data
-    arrayx = np.memmap(args.NOISY_DATA_FILE, dtype='float32', mode='c')
+    arrayx = np.memmap(args.NOISY_TRAIN_FILE, dtype='float32', mode='c')
     arrayx = arrayx.reshape((-1, time_steps, 1))
 
-    arrayy = np.memmap(args.CLEAN_DATA_FILE, dtype='float32', mode='c')
+    arrayy = np.memmap(args.CLEAN_TRAIN_FILE, dtype='float32', mode='c')
     arrayy = arrayy.reshape((-1, time_steps, 1))
+
+    array_test = np.memmap(args.NOISY_TEST_FILE, dtype='float32', mode='c')
+    array_test = array_test.reshape((-1, time_steps, 1))
 
     # load or create model
     model = create_model(time_steps)
@@ -66,11 +73,21 @@ def main():
     model.fit(
         arrayx,
         arrayy,
-        batch_size=args.batch_size
+        batch_size=args.batch_size,
+        epochs=args.epochs,
     )
 
     # save model
-    model.save_weights(args.MODEL_FILE)
+    if args.epochs != 0:
+        model.save_weights(args.MODEL_FILE)
+
+    # run prediction
+    array_prediction = model.predict(
+        array_test,
+        batch_size=args.batch_size,
+    )
+    array_output = np.memmap(args.PREDICTION_OUTFILE, dtype='float32', mode='w+', shape=array_prediction.shape)
+    np.copyto(array_output, array_prediction)
 
 if __name__ == '__main__':
     main()
