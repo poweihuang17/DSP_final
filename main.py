@@ -5,6 +5,16 @@ import lzma
 import numpy as np
 from model import create_model
 from keras.optimizers import Adam
+from keras.callbacks import Callback
+
+class LossHistory(Callback):
+    def on_train_begin(self, logs={}):
+        self.losses = []
+        self.accuracies = []
+
+    def on_batch_end(self, batch, logs={}):
+        self.losses.append(logs.get('loss'))
+        self.accuracies.append(logs.get('accuracy'))
 
 def main():
     # parse arguments
@@ -40,6 +50,8 @@ def main():
                             help='')
     arg_parser.add_argument('PREDICTION_OUTFILE',
                             help='')
+    arg_parser.add_argument('LOG_OUTFILE',
+                            help='')
 
     args = arg_parser.parse_args()
 
@@ -66,20 +78,31 @@ def main():
 
     model.compile(
         loss='mse',
-        optimizer=Adam(lr=args.learning_rate)
+        optimizer=Adam(lr=args.learning_rate),
+        metrics=['accuracy'],
     )
 
     # train model
+    history_callback = LossHistory()
+
     model.fit(
         arrayx,
         arrayy,
         batch_size=args.batch_size,
         epochs=args.epochs,
+        callbacks=[history_callback],
     )
 
     # save model
     if args.epochs != 0:
         model.save_weights(args.MODEL_FILE)
+
+    # save history
+    with open(args.LOG_OUTFILE, 'w') as file_history:
+        file_history.write('loss\taccuracy\n')
+
+        for loss, accuracy in zip(history_callback.losses, history_callback.accuracies):
+            file_history.write('%f\t%f\n' % (loss, accuracy))
 
     # run prediction
     array_prediction = model.predict(

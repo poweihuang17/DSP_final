@@ -29,7 +29,6 @@ def create_model(max_steps, filters_list=[32, 64, 128, 128], kernel_size_list=[6
     # final conv layer
     x = Conv1D(1, 9, padding='same') (x)
     output_layer = Add() ([x, input_layer])
-    print(x)
 
     model = Model(
         inputs=[input_layer],
