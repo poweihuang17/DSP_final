@@ -24,20 +24,33 @@ def main():
                             type=float,
                             default=0.001,
                             help='Learning rate for training phase')
+    arg_parser.add_argument('SAMPLING_RATE',
+                            type=int,
+                            help='')
+    arg_parser.add_argument('TIME_LENGTH',
+                            type=float,
+                            help='')
     arg_parser.add_argument('MODEL_FILE',
                             help='')
+    arg_parser.add_argument('NOISY_DATA_FILE',
+                            help='')
+    arg_parser.add_argument('CLEAN_DATA_FILE',
+                            help='')
 
-    arg_parser.add_argument('--sampling-rate', type=int )
+    args = arg_parser.parse_args()
 
-    arg_parser.add_argument('--length',type=float, help='in s')
+    # parse arguments
+    time_steps = args.SAMPLING_RATE * args.TIME_LENGTH
 
-    args =arg_parser.parse_args()
+    # load data
+    arrayx = np.memmap(args.NOISY_AUDIO_FILE, dtype='float32', mode='c')
+    arrayx = arrayx.reshape(arrayx.shape[0] + (1,))
 
-    sampling_rate=args.sampling_rate
-    length=args.length
+    arrayy = np.memmap(args.CLEAN_DATA_FILE, dtype='float32', mode='c')
+    arrayy = arrayy.reshape(arrayx.shape[0] + (1,))
 
     # load or create model
-    model = create_model(int(sampling_rate * length) )
+    model = create_model(time_steps)
 
     if os.path.exists(args.MODEL_FILE):
         model.load_weights(args.MODEL_FILE)
@@ -50,21 +63,14 @@ def main():
     )
 
     # train model
-    #with lzma.open("../dataset_clean.bin.xz","rb") as f:
-    #with open("../dataset_clean.bin") as f:
-    #    file_content = f.read()
-    #    with lzma.open("../dataset_noisy.bin.xz","rb") as g:
-    #        file_content2=g.read()
-    arrayx = np.memmap("./dataset__noisy.bin", dtype='float32', mode='c')
-    arrayx = arrayx.reshape((-1, int(sampling_rate*length),1))
+    model.fit(
+        arrayx,
+        arrayy,
+        batch_size=args.batch_size
+    )
 
-    arrayy = np.memmap("./dataset__clean.bin", dtype='float32', mode='c')
-    arrayy = arrayy.reshape((-1, int(sampling_rate *length),1))
-    
-            #x = np.random.rand(1, 30, 1)
-            #y = np.random.rand(1, 30, 1)
-            
-    model.fit(arrayx, arrayy, batch_size=args.batch_size)
+    # save model
+    model.save_weights(args.MODEL_FILE)
 
 if __name__ == '__main__':
     main()
