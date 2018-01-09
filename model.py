@@ -4,7 +4,7 @@ from keras.models import Model
 from keras.layers import Input, Activation, LeakyReLU
 from keras.layers import Conv1D, Dropout, Dropout, Add, Concatenate
 
-def create_model(max_steps, filters_list=[64, 128, 256, 256], kernel_size_list=[65, 33, 17, 9]):
+def create_model(max_steps, filters_list=[32, 64, 128, 128], kernel_size_list=[65, 33, 17, 9]):
     assert len(filters_list) == len(kernel_size_list)
 
     # encoder part
@@ -17,7 +17,6 @@ def create_model(max_steps, filters_list=[64, 128, 256, 256], kernel_size_list=[
         x = Conv1D(filters, kernel_size, padding='same') (x)
         x = Dropout(0.5) (x)
         x = LeakyReLU() (x)
-        print(x)
         encoder_layers.append(x)
 
     # decoder part
@@ -26,7 +25,6 @@ def create_model(max_steps, filters_list=[64, 128, 256, 256], kernel_size_list=[
         x = Dropout(0.5) (x)
         x = LeakyReLU() (x)
         x = Concatenate() ([x, shortcut])
-        print(x)
 
     # final conv layer
     x = Conv1D(1, 9, padding='same') (x)

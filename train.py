@@ -18,7 +18,7 @@ def main():
                             help='Number of training steps')
     arg_parser.add_argument('--batch-size',
                             type=int,
-                            default=64,
+                            default=10,
                             help='Batch size for training phase')
     arg_parser.add_argument('--learning-rate',
                             type=float,
@@ -40,14 +40,14 @@ def main():
     args = arg_parser.parse_args()
 
     # parse arguments
-    time_steps = args.SAMPLING_RATE * args.TIME_LENGTH
+    time_steps = int(args.SAMPLING_RATE * args.TIME_LENGTH)
 
     # load data
-    arrayx = np.memmap(args.NOISY_AUDIO_FILE, dtype='float32', mode='c')
-    arrayx = arrayx.reshape(arrayx.shape[0] + (1,))
+    arrayx = np.memmap(args.NOISY_DATA_FILE, dtype='float32', mode='c')
+    arrayx = arrayx.reshape((-1, time_steps, 1))
 
     arrayy = np.memmap(args.CLEAN_DATA_FILE, dtype='float32', mode='c')
-    arrayy = arrayy.reshape(arrayx.shape[0] + (1,))
+    arrayy = arrayy.reshape((-1, time_steps, 1))
 
     # load or create model
     model = create_model(time_steps)
