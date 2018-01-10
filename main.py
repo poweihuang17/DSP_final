@@ -6,6 +6,7 @@ import numpy as np
 from model import create_model
 from keras.optimizers import Adam
 from keras.callbacks import Callback
+from keras.utils.vis_utils import plot_model
 
 class LossHistory(Callback):
     def on_train_begin(self, logs={}):
@@ -14,7 +15,6 @@ class LossHistory(Callback):
 
     def on_batch_end(self, batch, logs={}):
         self.losses.append(logs.get('loss'))
-        self.accuracies.append(logs.get('accuracy'))
 
 def main():
     # parse arguments
@@ -82,6 +82,10 @@ def main():
         metrics=['accuracy'],
     )
 
+    # plot model
+    if args.plot_model is not None:
+        plot_model(model, to_file=args.plot_model, show_shapes=True)
+
     # train model
     history_callback = LossHistory()
 
@@ -101,8 +105,8 @@ def main():
     with open(args.LOG_OUTFILE, 'w') as file_history:
         file_history.write('loss\taccuracy\n')
 
-        for loss, accuracy in zip(history_callback.losses, history_callback.accuracies):
-            file_history.write('%f\t%f\n' % (loss, accuracy))
+        for loss in history_callback.losses:
+            file_history.write('%f\n' % loss)
 
     # run prediction
     array_prediction = model.predict(
